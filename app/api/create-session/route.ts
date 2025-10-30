@@ -17,22 +17,49 @@ const DEFAULT_CHATKIT_BASE = "https://api.openai.com";
 const SESSION_COOKIE_NAME = "chatkit_session_id";
 const SESSION_COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
+// CORS configuration
+const ALLOWED_ORIGINS: string[] = (process.env.CORS_ALLOWED_ORIGINS ??
+  "https://cosmeccare.com")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+function getCorsHeaders(request: Request): Record<string, string> {
+  const origin = request.headers.get("origin");
+  const headers: Record<string, string> = {
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers":
+      "Content-Type, Authorization, OpenAI-Beta",
+    Vary: "Origin",
+  };
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    headers["Access-Control-Allow-Origin"] = origin;
+    headers["Access-Control-Allow-Credentials"] = "true";
+  }
+  return headers;
+}
+
+function mergeHeaders(
+  base: Record<string, string>,
+  extra: Record<string, string>
+): Record<string, string> {
+  return { ...base, ...extra };
+}
+
 export async function POST(request: Request): Promise<Response> {
   if (request.method !== "POST") {
-    return methodNotAllowedResponse();
+    return methodNotAllowedResponse(request);
   }
   let sessionCookie: string | null = null;
   try {
     const openaiApiKey = process.env.OPENAI_API_KEY;
     if (!openaiApiKey) {
-      return new Response(
-        JSON.stringify({
-          error: "Missing OPENAI_API_KEY environment variable",
-        }),
-        {
-          status: 500,
-          headers: { "Content-Type": "application/json" },
-        }
+      return buildJsonResponse(
+        { error: "Missing OPENAI_API_KEY environment variable" },
+        500,
+        { "Content-Type": "application/json" },
+        sessionCookie,
+        request
       );
     }
 
@@ -55,7 +82,8 @@ export async function POST(request: Request): Promise<Response> {
         { error: "Missing workflow id" },
         400,
         { "Content-Type": "application/json" },
-        sessionCookie
+        sessionCookie,
+        request
       );
     }
 
@@ -107,7 +135,8 @@ export async function POST(request: Request): Promise<Response> {
         },
         upstreamResponse.status,
         { "Content-Type": "application/json" },
-        sessionCookie
+        sessionCookie,
+        request
       );
     }
 
@@ -122,7 +151,8 @@ export async function POST(request: Request): Promise<Response> {
       responsePayload,
       200,
       { "Content-Type": "application/json" },
-      sessionCookie
+      sessionCookie,
+      request
     );
   } catch (error) {
     console.error("Create session error", error);
@@ -130,19 +160,28 @@ export async function POST(request: Request): Promise<Response> {
       { error: "Unexpected error" },
       500,
       { "Content-Type": "application/json" },
-      sessionCookie
+      sessionCookie,
+      request
     );
   }
 }
 
-export async function GET(): Promise<Response> {
-  return methodNotAllowedResponse();
+export async function GET(request: Request): Promise<Response> {
+  return methodNotAllowedResponse(request);
 }
 
-function methodNotAllowedResponse(): Response {
+export async function OPTIONS(request: Request): Promise<Response> {
+  const headers = getCorsHeaders(request);
+  headers["Access-Control-Max-Age"] = "86400";
+  return new Response(null, { status: 204, headers });
+}
+
+function methodNotAllowedResponse(request?: Request): Response {
+  const base = { "Content-Type": "application/json" } as Record<string, string>;
+  const headers = request ? mergeHeaders(base, getCorsHeaders(request)) : base;
   return new Response(JSON.stringify({ error: "Method Not Allowed" }), {
     status: 405,
-    headers: { "Content-Type": "application/json" },
+    headers,
   });
 }
 
@@ -209,9 +248,11 @@ function buildJsonResponse(
   payload: unknown,
   status: number,
   headers: Record<string, string>,
-  sessionCookie: string | null
+  sessionCookie: string | null,
+  request?: Request
 ): Response {
-  const responseHeaders = new Headers(headers);
+  const merged = request ? mergeHeaders(headers, getCorsHeaders(request)) : headers;
+  const responseHeaders = new Headers(merged);
 
   if (sessionCookie) {
     responseHeaders.append("Set-Cookie", sessionCookie);
