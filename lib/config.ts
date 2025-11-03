@@ -5,17 +5,29 @@ export const WORKFLOW_ID =
 
 export const CREATE_SESSION_ENDPOINT = "/api/create-session";
 
+export const LOCALE = "th-TH";
+
 export const STARTER_PROMPTS: StartScreenPrompt[] = [
   {
-    label: "What can you do?",
-    prompt: "What can you do?",
+    label: "ปรึกษาปัญหาผิว",
+    prompt: "ปรึกษาปัญหาผิว",
+    icon: "circle-question",
+  },
+  {
+    label: "สอบถามข้อมูลสินค้า",
+    prompt: "สอบถามข้อมูลสินค้า",
+    icon: "circle-question",
+  },
+  {
+    label: "สั่งซื้อสินค้า",
+    prompt: "สั่งซื้อสินค้า",
     icon: "circle-question",
   },
 ];
 
-export const PLACEHOLDER_INPUT = "Ask anything...";
+export const PLACEHOLDER_INPUT = "สอบถามข้อมูล...";
 
-export const GREETING = "How can I help you today?";
+export const GREETING = "สอบถามข้อมูลอะไรดีค่ะ?";
 
 export const getThemeConfig = (theme: ColorScheme): ThemeOption => ({
   color: {
@@ -30,6 +42,7 @@ export const getThemeConfig = (theme: ColorScheme): ThemeOption => ({
     },
   },
   radius: "round",
+ 
   // Add other theme options here
   // chatkit.studio/playground to explore config options
 });
