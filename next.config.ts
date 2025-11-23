@@ -7,6 +7,24 @@ const nextConfig: NextConfig = {
     };
     return config;
   },
+  async headers() {
+    return [
+      {
+        // Apply headers to all routes
+        source: '/:path*',
+        headers: [
+          {
+            key: 'X-Frame-Options',
+            value: 'ALLOWALL',
+          },
+          {
+            key: 'Content-Security-Policy',
+            value: "frame-ancestors *",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
