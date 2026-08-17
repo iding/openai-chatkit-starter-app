@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, cosmec_chatkit_demo ]
   pull_request:
 
 jobs:
